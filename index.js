@@ -16,7 +16,7 @@ limitations under the License.
 */
 
 const q = require("q");
-import expect from 'expect';
+const expect = require('expect');
 
 /**
  * Construct a mock HTTP backend, heavily inspired by Angular.js.
@@ -68,13 +68,13 @@ HttpBackend.prototype = {
         }
         console.log(
             "HTTP backend flushing... (path=%s numToFlush=%s waitTime=%s)",
-            path, numToFlush, waitTime,
+            path, numToFlush, waitTime
         );
         const tryFlush = function() {
             // if there's more real requests and more expected requests, flush 'em.
             console.log(
                 "  trying to flush queue => reqs=[%s] expected=[%s]",
-                self.requests, self.expectedRequests.map((er) => er.path),
+                self.requests, self.expectedRequests.map((er) => er.path)
             );
             if (self._takeFromQueue(path)) {
                 // try again on the next tick.
@@ -147,7 +147,7 @@ HttpBackend.prototype = {
                     body = body(req.path, req.data);
                 }
                 req.callback(
-                    testResponse.err, testResponse.response, body,
+                    testResponse.err, testResponse.response, body
                 );
                 matchingReq = null;
             }
@@ -165,7 +165,7 @@ HttpBackend.prototype = {
         const firstOutstandingReq = this.requests[0] || {};
         expect(this.requests.length).toEqual(0,
             "Expected no more HTTP requests but received request to " +
-            firstOutstandingReq.path,
+            firstOutstandingReq.path
         );
     },
 
@@ -175,7 +175,7 @@ HttpBackend.prototype = {
     verifyNoOutstandingExpectation: function() {
         const firstOutstandingExpectation = this.expectedRequests[0] || {};
         expect(this.expectedRequests.length).toEqual(0,
-            "Expected to see HTTP request for " + firstOutstandingExpectation.path,
+            "Expected to see HTTP request for " + firstOutstandingExpectation.path
         );
     },
 
