@@ -118,7 +118,8 @@ HttpBackend.prototype = {
                     log(`  flushed. Trying for more.`);
                     setTimeout(tryFlush, 0);
                 }
-            } else if (flushed === 0 && Date.now() < endTime) {
+            } else if ((flushed === 0 || (numToFlush && numToFlush > flushed))
+                       && Date.now() < endTime) {
                 // we may not have made the request yet, wait a generous amount of
                 // time before giving up.
                 log(`  nothing to flush yet; waiting for requests.`);
@@ -137,6 +138,51 @@ HttpBackend.prototype = {
 
         return defer.promise;
     },
+
+    /**
+     * Repeatedly flush requests until the list of expectations is empty.
+     *
+     * There is a total timeout of 100ms, after which the returned promise is
+     * rejected.
+     *
+     * @return {Promise} resolves when there is nothing left to flush, with the
+     *    number of requests flushed
+     */
+    flushAllExpected: function() {
+        const waitTime = 100;
+        const endTime = waitTime + Date.now();
+        let flushed = 0;
+
+        const iterate = () => {
+            if (this.expectedRequests.length === 0) {
+                return null;
+            }
+
+            const timeRemaining = endTime - Date.now();
+            if (timeRemaining <= 0) {
+                throw new Error(
+                    `Timed out after flushing ${flushed} requests; `+
+                    `${this.expectedRequests.length} remaining`,
+                );
+            }
+
+            return this.flush(
+                undefined, undefined, timeRemaining,
+            ).then((f) => {
+                flushed += f;
+                return iterate();
+            });
+        };
+
+        return new Promise((resolve, reject) => {
+            iterate().then(() => {
+                resolve(flushed);
+            }, (e) => {
+                reject(e);
+            });
+        });
+    },
+
 
     /**
      * Attempts to resolve requests/expected requests.
