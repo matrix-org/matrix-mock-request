@@ -139,6 +139,51 @@ HttpBackend.prototype = {
     },
 
     /**
+     * Repeatedly flush requests until the list of expectations is empty.
+     *
+     * There is a total timeout of 100ms, after which the returned promise is
+     * rejected.
+     *
+     * @return {Promise} resolves when there is nothing left to flush, with the
+     *    number of requests flushed
+     */
+    flushAllExpected: function() {
+        const waitTime = 100;
+        const endTime = waitTime + Date.now();
+        let flushed = 0;
+
+        const iterate = () => {
+            if (this.expectedRequests.length === 0) {
+                return null;
+            }
+
+            const timeRemaining = endTime - Date.now();
+            if (timeRemaining <= 0) {
+                throw new Error(
+                    `Timed out after flushing ${flushed} requests; `+
+                    `${this.expectedRequests.length} remaining`,
+                );
+            }
+
+            return this.flush(
+                undefined, undefined, timeRemaining,
+            ).then((f) => {
+                flushed += f;
+                return iterate();
+            });
+        };
+
+        return new Promise((resolve, reject) => {
+            iterate().then(() => {
+                resolve(flushed);
+            }, (e) => {
+                reject(e);
+            });
+        });
+    },
+
+
+    /**
      * Attempts to resolve requests/expected requests.
      * @param {string} path The path to flush (optional) default: all.
      * @return {boolean} true if something was resolved.
