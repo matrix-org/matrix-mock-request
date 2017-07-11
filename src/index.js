@@ -104,6 +104,14 @@ HttpBackend.prototype = {
         const endTime =  waitTime + Date.now();
 
         const tryFlush = function() {
+            try {
+                _tryFlush();
+            } catch (e) {
+                defer.reject(e);
+            }
+        };
+
+        const _tryFlush = function() {
             // if there's more real requests and more expected requests, flush 'em.
             log(`  trying to flush => reqs=[${self.requests}] ` +
                 `expected=[${self.expectedRequests}]`
