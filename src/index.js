@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-const q = require("q");
+import Promise from 'bluebird';
 import expect from 'expect';
 
 /**
@@ -86,7 +86,7 @@ HttpBackend.prototype = {
      *    number of requests flushed
      */
     flush: function(path, numToFlush, waitTime) {
-        const defer = q.defer();
+        const defer = Promise.defer();
         const self = this;
         let flushed = 0;
         if (waitTime === undefined) {
