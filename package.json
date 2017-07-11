@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "babel src -d lib --source-maps",
+    "prepublish": "npm run build",
     "start": "babel -w src -d lib --source-maps",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
