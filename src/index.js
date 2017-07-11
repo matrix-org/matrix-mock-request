@@ -118,7 +118,8 @@ HttpBackend.prototype = {
                     log(`  flushed. Trying for more.`);
                     setTimeout(tryFlush, 0);
                 }
-            } else if (flushed === 0 && Date.now() < endTime) {
+            } else if ((flushed === 0 || (numToFlush && numToFlush > flushed))
+                       && Date.now() < endTime) {
                 // we may not have made the request yet, wait a generous amount of
                 // time before giving up.
                 log(`  nothing to flush yet; waiting for requests.`);
