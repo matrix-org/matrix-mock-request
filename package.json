@@ -22,6 +22,7 @@
   "files": [
     ".babelrc",
     ".gitignore",
+    "CHANGES.md",
     "index.js",
     "lib",
     "LICENSE",
