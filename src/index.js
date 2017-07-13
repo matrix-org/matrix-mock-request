@@ -157,15 +157,21 @@ HttpBackend.prototype = {
      *    number of requests flushed
      */
     flushAllExpected: function() {
+        if (this.expectedRequests.length === 0) {
+            // calling flushAllExpected when there are no expectations is a
+            // silly thing to do, and probably means that your test isn't
+            // doing what you think it is doing (or it is racy). Hence we
+            // reject this, rather than resolving immediately.
+            return Promise.reject(new Error(
+                `flushAllExpected called with an empty expectation list`,
+            ));
+        }
+
         const waitTime = 100;
         const endTime = waitTime + Date.now();
         let flushed = 0;
 
         const iterate = () => {
-            if (this.expectedRequests.length === 0) {
-                return null;
-            }
-
             const timeRemaining = endTime - Date.now();
             if (timeRemaining <= 0) {
                 throw new Error(
@@ -178,6 +184,12 @@ HttpBackend.prototype = {
                 undefined, undefined, timeRemaining,
             ).then((f) => {
                 flushed += f;
+
+                if (this.expectedRequests.length === 0) {
+                    // we're done
+                    return null;
+                }
+
                 return iterate();
             });
         };

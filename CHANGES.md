@@ -1,3 +1,8 @@
+## next version
+
+ - Give a sensible rejection from `flushAllExpected` when there are no
+   expectations (previously it would throw an obscure exception)
+ 
 ## 1.1.0
 
  - Add `flushAllExpected`.
