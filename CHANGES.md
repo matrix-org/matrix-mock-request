@@ -1,4 +1,4 @@
-## next version
+## 1.1.1
 
  - Give a sensible rejection from `flushAllExpected` when there are no
    expectations (previously it would throw an obscure exception)
