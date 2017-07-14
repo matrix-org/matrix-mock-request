@@ -1,3 +1,7 @@
+## 1.2.0
+
+ - Allow specification of a timeout on `flushAllExpected`
+
 ## 1.1.1
 
  - Give a sensible rejection from `flushAllExpected` when there are no
