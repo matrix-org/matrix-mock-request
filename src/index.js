@@ -150,13 +150,17 @@ HttpBackend.prototype = {
     /**
      * Repeatedly flush requests until the list of expectations is empty.
      *
-     * There is a total timeout of 100ms, after which the returned promise is
-     * rejected.
+     * There is a total timeout (of 100ms by default), after which the returned
+     * promise is rejected.
      *
+     * @param {Object=} opts Options object
+     * @param {Number=} opts.timeout Total timeout, in ms. 100 by default.
      * @return {Promise} resolves when there is nothing left to flush, with the
      *    number of requests flushed
      */
-    flushAllExpected: function() {
+    flushAllExpected: function(opts) {
+        opts = opts || {};
+
         if (this.expectedRequests.length === 0) {
             // calling flushAllExpected when there are no expectations is a
             // silly thing to do, and probably means that your test isn't
@@ -167,7 +171,7 @@ HttpBackend.prototype = {
             ));
         }
 
-        const waitTime = 100;
+        const waitTime = opts.timeout === undefined ? 100 : opts.timeout;
         const endTime = waitTime + Date.now();
         let flushed = 0;
 
