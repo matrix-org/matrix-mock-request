@@ -1,11 +1,15 @@
+## 1.2.1
+
+ - Bump default timeout on `flushAllExpected` to 1000ms.
+ 
 ## 1.2.0
 
- - Allow specification of a timeout on `flushAllExpected`
+ - Allow specification of a timeout on `flushAllExpected`.
 
 ## 1.1.1
 
  - Give a sensible rejection from `flushAllExpected` when there are no
-   expectations (previously it would throw an obscure exception)
+   expectations (previously it would throw an obscure exception).
  
 ## 1.1.0
 
