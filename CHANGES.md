@@ -1,3 +1,8 @@
+## 1.2.2
+
+ - Add stop() method returning a promise that resolves when all
+   flushes are complete.
+
 ## 1.2.1
 
  - Bump default timeout on `flushAllExpected` to 1000ms.
