@@ -1,6 +1,7 @@
 /*
 Copyright 2015, 2016 OpenMarket Ltd
 Copyright 2017 Vector Creations Ltd
+Copyright 2018 New Vector Ltd
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +27,13 @@ function HttpBackend() {
     this.requests = [];
     this.expectedRequests = [];
     const self = this;
+
+    // All the promises our flush requests have returned. When all these promises are
+    // resolved or rejected, there are no more flushes in progress.
+    // For simplicity we never remove promises from this loop: this is a mock utility
+    // for short duration tests, so this keeps it simpler.
+    this._flushPromises = [];
+
     // the request function dependency that the SDK needs.
     this.requestFn = function(opts, callback) {
         const req = new Request(opts, callback);
@@ -102,6 +110,8 @@ HttpBackend.prototype = {
             + ")"
         );
         const endTime =  waitTime + Date.now();
+
+        this._flushPromises.push(defer.promise);
 
         const tryFlush = function() {
             try {
@@ -198,13 +208,15 @@ HttpBackend.prototype = {
             });
         };
 
-        return new Promise((resolve, reject) => {
+        const prom = new Promise((resolve, reject) => {
             iterate().then(() => {
                 resolve(flushed);
             }, (e) => {
                 reject(e);
             });
         });
+        this._flushPromises.push(prom);
+        return prom;
     },
 
 
@@ -301,6 +313,13 @@ HttpBackend.prototype = {
         const pendingReq = new ExpectedRequest(method, path, data);
         this.expectedRequests.push(pendingReq);
         return pendingReq;
+    },
+
+    /**
+     * @return {Promise} resolves once all pending flushes are complete.
+     */
+    stop: function() {
+        return Promise.all(this._flushPromises);
     },
 };
 
