@@ -263,7 +263,7 @@ HttpBackend.prototype = {
 
                 let body = testResponse.body;
                 if (Object.prototype.toString.call(body) == "[object Function]") {
-                    body = body(req.path, req.data);
+                    body = body(req.path, req.data, req);
                 }
 
                 if (!testResponse.rawBody) {
