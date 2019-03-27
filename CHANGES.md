@@ -1,3 +1,7 @@
+## 1.2.3
+
+ - Convert away from `Promise.defer`.
+
 ## 1.2.2
 
  - Add stop() method returning a promise that resolves when all
