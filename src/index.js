@@ -94,67 +94,68 @@ HttpBackend.prototype = {
      *    number of requests flushed
      */
     flush: function(path, numToFlush, waitTime) {
-        const defer = Promise.defer();
-        const self = this;
-        let flushed = 0;
-        if (waitTime === undefined) {
-            waitTime = 100;
-        }
-
-        function log(msg) {
-            console.log(`${Date.now()} flush[${path || ''}]: ${msg}`);
-        }
-        log("HTTP backend flushing... (path=" + path
-            + " numToFlush=" + numToFlush
-            + " waitTime=" + waitTime
-            + ")"
-        );
-        const endTime =  waitTime + Date.now();
-
-        this._flushPromises.push(defer.promise);
-
-        const tryFlush = function() {
-            try {
-                _tryFlush();
-            } catch (e) {
-                defer.reject(e);
+        const promise = new Promise((resolve, reject) => {
+            const self = this;
+            let flushed = 0;
+            if (waitTime === undefined) {
+                waitTime = 100;
             }
-        };
 
-        const _tryFlush = function() {
-            // if there's more real requests and more expected requests, flush 'em.
-            log(`  trying to flush => reqs=[${self.requests}] ` +
-                `expected=[${self.expectedRequests}]`
+            function log(msg) {
+                console.log(`${Date.now()} flush[${path || ''}]: ${msg}`);
+            }
+            log("HTTP backend flushing... (path=" + path
+                + " numToFlush=" + numToFlush
+                + " waitTime=" + waitTime
+                + ")"
             );
-            if (self._takeFromQueue(path)) {
-                // try again on the next tick.
-                flushed += 1;
-                if (numToFlush && flushed === numToFlush) {
-                    log(`Flushed assigned amount: ${numToFlush}`);
-                    defer.resolve(flushed);
-                } else {
-                    log(`  flushed. Trying for more.`);
-                    setTimeout(tryFlush, 0);
-                }
-            } else if ((flushed === 0 || (numToFlush && numToFlush > flushed))
-                       && Date.now() < endTime) {
-                // we may not have made the request yet, wait a generous amount of
-                // time before giving up.
-                log(`  nothing to flush yet; waiting for requests.`);
-                setTimeout(tryFlush, 5);
-            } else {
-                if (flushed === 0) {
-                    log("nothing to flush; giving up");
-                } else {
-                    log(`no more flushes after flushing ${flushed} requests`);
-                }
-                defer.resolve(flushed);
-            }
-        };
+            const endTime = waitTime + Date.now();
 
-        setTimeout(tryFlush, 0);
+            const tryFlush = function() {
+                try {
+                    _tryFlush();
+                } catch (e) {
+                    reject(e);
+                }
+            };
 
-        return defer.promise;
+            const _tryFlush = function() {
+                // if there's more real requests and more expected requests, flush 'em.
+                log(`  trying to flush => reqs=[${self.requests}] ` +
+                    `expected=[${self.expectedRequests}]`
+                );
+                if (self._takeFromQueue(path)) {
+                    // try again on the next tick.
+                    flushed += 1;
+                    if (numToFlush && flushed === numToFlush) {
+                        log(`Flushed assigned amount: ${numToFlush}`);
+                        resolve(flushed);
+                    } else {
+                        log(`  flushed. Trying for more.`);
+                        setTimeout(tryFlush, 0);
+                    }
+                } else if ((flushed === 0 || (numToFlush && numToFlush > flushed))
+                    && Date.now() < endTime) {
+                    // we may not have made the request yet, wait a generous amount of
+                    // time before giving up.
+                    log(`  nothing to flush yet; waiting for requests.`);
+                    setTimeout(tryFlush, 5);
+                } else {
+                    if (flushed === 0) {
+                        log("nothing to flush; giving up");
+                    } else {
+                        log(`no more flushes after flushing ${flushed} requests`);
+                    }
+                    resolve(flushed);
+                }
+            };
+
+            setTimeout(tryFlush, 0);
+        });
+
+        this._flushPromises.push(promise);
+
+        return promise;
     },
 
     /**
