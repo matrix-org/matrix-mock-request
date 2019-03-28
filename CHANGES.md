@@ -1,6 +1,7 @@
 ## 1.2.3
 
  - Convert away from `Promise.defer`.
+ - Pass the whole request object to response handlers.
 
 ## 1.2.2
 
