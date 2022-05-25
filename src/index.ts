@@ -33,14 +33,14 @@ type RequestOpts = {
  * @constructor
  */
 class HttpBackend {
-    public requests = [];
-    public expectedRequests = [];
+    public requests: Request[] = [];
+    public expectedRequests: ExpectedRequest[] = [];
 
     // All the promises our flush requests have returned. When all these promises are
     // resolved or rejected, there are no more flushes in progress.
     // For simplicity we never remove promises from this loop: this is a mock utility
     // for short duration tests, so this keeps it simpler.
-    public _flushPromises = [];
+    public _flushPromises: Promise<unknown>[] = [];
 
     // the request function dependency that the SDK needs.
     public requestFn = (opts: RequestOpts, callback: Callback): {
@@ -298,10 +298,10 @@ class HttpBackend {
      * Makes sure that the SDK hasn't sent any more requests to the backend.
      */
     public verifyNoOutstandingRequests = (): void => {
-        const firstOutstandingReq = this.requests[0] || {};
+        const firstOutstandingReq = this.requests[0];
         expect(this.requests.length).toEqual(0,
             "Expected no more HTTP requests but received request to " +
-            firstOutstandingReq.path,
+            firstOutstandingReq?.path,
         );
     }
 
@@ -309,9 +309,9 @@ class HttpBackend {
      * Makes sure that the test doesn't have any unresolved requests.
      */
     public verifyNoOutstandingExpectation = (): void => {
-        const firstOutstandingExpectation = this.expectedRequests[0] || {};
+        const firstOutstandingExpectation = this.expectedRequests[0];
         expect(this.expectedRequests.length).toEqual(0,
-            "Expected to see HTTP request for " + firstOutstandingExpectation.path,
+            "Expected to see HTTP request for " + firstOutstandingExpectation?.path,
         );
     }
 
