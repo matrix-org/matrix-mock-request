@@ -18,26 +18,39 @@ limitations under the License.
 
 import expect from 'expect';
 
+type HttpMethod = 'GET' | 'PUT' | 'POST' | 'DELETE';
+type Callback = (err?: Error, response?: XMLHttpRequest, body?: string) => void;
+type RequestOpts = {
+    method: HttpMethod;
+    uri: string;
+    body?: string;
+    qs?: Record<string, string>;
+    headers?: Record<string, string>;
+}
+
 /**
  * Construct a mock HTTP backend, heavily inspired by Angular.js.
  * @constructor
  */
-function HttpBackend() {
-    this.requests = [];
-    this.expectedRequests = [];
-    const self = this;
+class HttpBackend {
+    public requests: Request[] = [];
+    public expectedRequests: ExpectedRequest[] = [];
 
     // All the promises our flush requests have returned. When all these promises are
     // resolved or rejected, there are no more flushes in progress.
     // For simplicity we never remove promises from this loop: this is a mock utility
     // for short duration tests, so this keeps it simpler.
-    this._flushPromises = [];
+    public _flushPromises: Promise<unknown>[] = [];
 
     // the request function dependency that the SDK needs.
-    this.requestFn = function(opts, callback) {
+    public requestFn = (opts: RequestOpts, callback: Callback): {
+        abort: () => void;
+    } => {
         const req = new Request(opts, callback);
         console.log(`${Date.now()} HTTP backend received request: ${req}`);
-        self.requests.push(req);
+        this.requests.push(req);
+
+        const self = this;
 
         const abort = function() {
             const idx = self.requests.indexOf(req);
@@ -45,6 +58,8 @@ function HttpBackend() {
                 console.log("Aborting HTTP request: %s %s", opts.method,
                             opts.uri);
                 self.requests.splice(idx, 1);
+                // @TODO replace this with AbortError and remove special handling in js-sdk
+                // @ts-ignore
                 req.callback("aborted");
             }
         };
@@ -56,12 +71,11 @@ function HttpBackend() {
 
     // very simplistic mapping from the whatwg fetch interface onto the request
     // interface, so we can use the same mock backend for both.
-    this.fetchFn = function(input, init) {
-        init = init || {};
+    public fetchFn = (input: string, init?: Omit<RequestOpts, 'uri'>): Promise<{ ok: boolean, json: () => unknown }> => {
         const requestOpts = {
             uri: input,
-            method: init.method || 'GET',
-            body: init.body,
+            method: init?.method || 'GET',
+            body: init?.body,
         };
 
         return new Promise((resolve, reject) => {
@@ -77,11 +91,10 @@ function HttpBackend() {
 
             const req = new Request(requestOpts, callback);
             console.log(`HTTP backend received request: ${req}`);
-            self.requests.push(req);
+            this.requests.push(req);
         });
     };
-}
-HttpBackend.prototype = {
+
     /**
      * Respond to all of the requests (flush the queue).
      * @param {string} path The path to flush (optional) default: all.
@@ -92,9 +105,9 @@ HttpBackend.prototype = {
      * @return {Promise} resolves when there is nothing left to flush, with the
      *    number of requests flushed
      */
-    flush: function(path, numToFlush, waitTime) {
-        const promise = new Promise((resolve, reject) => {
-            const self = this;
+    public flush = (path: string | undefined, numToFlush?: number, waitTime?: number): Promise<number> => {
+        const self = this;
+        const promise = new Promise<number>((resolve, reject) => {
             let flushed = 0;
             if (waitTime === undefined) {
                 waitTime = 100;
@@ -155,7 +168,7 @@ HttpBackend.prototype = {
         this._flushPromises.push(promise);
 
         return promise;
-    },
+    }
 
     /**
      * Repeatedly flush requests until the list of expectations is empty.
@@ -168,7 +181,7 @@ HttpBackend.prototype = {
      * @return {Promise} resolves when there is nothing left to flush, with the
      *    number of requests flushed
      */
-    flushAllExpected: function(opts) {
+    public flushAllExpected = (opts: { timeout?: number } = {}): Promise<number> => {
         opts = opts || {};
 
         if (this.expectedRequests.length === 0) {
@@ -208,7 +221,7 @@ HttpBackend.prototype = {
             });
         };
 
-        const prom = new Promise((resolve, reject) => {
+        const prom = new Promise<number>((resolve, reject) => {
             iterate().then(() => {
                 resolve(flushed);
             }, (e) => {
@@ -217,7 +230,7 @@ HttpBackend.prototype = {
         });
         this._flushPromises.push(prom);
         return prom;
-    },
+    }
 
 
     /**
@@ -225,7 +238,7 @@ HttpBackend.prototype = {
      * @param {string} path The path to flush (optional) default: all.
      * @return {boolean} true if something was resolved.
      */
-    _takeFromQueue: function(path) {
+    private _takeFromQueue = (path: string): boolean => {
         let req = null;
         let i;
         let j;
@@ -279,28 +292,28 @@ HttpBackend.prototype = {
             return true;
         }
         return false;
-    },
+    }
 
     /**
      * Makes sure that the SDK hasn't sent any more requests to the backend.
      */
-    verifyNoOutstandingRequests: function() {
-        const firstOutstandingReq = this.requests[0] || {};
+    public verifyNoOutstandingRequests = (): void => {
+        const firstOutstandingReq = this.requests[0];
         expect(this.requests.length).toEqual(0,
             "Expected no more HTTP requests but received request to " +
-            firstOutstandingReq.path,
+            firstOutstandingReq?.path,
         );
-    },
+    }
 
     /**
      * Makes sure that the test doesn't have any unresolved requests.
      */
-    verifyNoOutstandingExpectation: function() {
-        const firstOutstandingExpectation = this.expectedRequests[0] || {};
+    public verifyNoOutstandingExpectation = (): void => {
+        const firstOutstandingExpectation = this.expectedRequests[0];
         expect(this.expectedRequests.length).toEqual(0,
-            "Expected to see HTTP request for " + firstOutstandingExpectation.path,
+            "Expected to see HTTP request for " + firstOutstandingExpectation?.path,
         );
-    },
+    }
 
     /**
      * Create an expected request.
@@ -309,19 +322,21 @@ HttpBackend.prototype = {
      * @param {Object} data The expected data.
      * @return {Request} An expected request.
      */
-    when: function(method, path, data) {
+    public when = (method: HttpMethod, path: string, data?: Record<string, string>): ExpectedRequest => {
         const pendingReq = new ExpectedRequest(method, path, data);
         this.expectedRequests.push(pendingReq);
         return pendingReq;
-    },
+    }
 
     /**
      * @return {Promise} resolves once all pending flushes are complete.
      */
-    stop: function() {
+    public stop = (): Promise<unknown[]> => {
         return Promise.all(this._flushPromises);
-    },
+    }
 };
+
+type RequestCheckFunction = (request: Request) => void;
 
 /**
  * Represents the expectation of a request.
@@ -334,28 +349,28 @@ HttpBackend.prototype = {
  * @param {string} path
  * @param {object?} data
  */
-function ExpectedRequest(method, path, data) {
-    this.method = method;
-    this.path = path;
-    this.data = data;
-    this.response = null;
-    this.checks = [];
-}
+class ExpectedRequest {
+    public response: unknown = null;
+    public checks: RequestCheckFunction[] = [];
+    constructor(
+        public readonly method: HttpMethod,
+        public readonly path: string,
+        public readonly data?: Record<string, string>) {
+    }
 
-ExpectedRequest.prototype = {
-    toString: function() {
+    public toString = (): string => {
         return this.method + " " + this.path
-    },
+    }
 
     /**
      * Execute a check when this request has been satisfied.
      * @param {Function} fn The function to execute.
      * @return {Request} for chaining calls.
      */
-    check: function(fn) {
+    public check = (fn: RequestCheckFunction): ExpectedRequest => {
         this.checks.push(fn);
         return this;
-    },
+    };
 
     /**
      * Respond with the given data when this request is satisfied.
@@ -365,7 +380,10 @@ ExpectedRequest.prototype = {
      * @param {Boolean} rawBody true if the response should be returned directly rather
      * than json-stringifying it first.
      */
-    respond: function(code, data, rawBody) {
+    public respond = (
+        code: number, data?: Record<string, unknown> | (() => Record<string, unknown>),
+        rawBody?: boolean
+    ): void => {
         this.response = {
             response: {
                 statusCode: code,
@@ -377,14 +395,14 @@ ExpectedRequest.prototype = {
             err: null,
             rawBody: rawBody || false,
         };
-    },
+    }
 
     /**
      * Fail with an Error when this request is satisfied.
      * @param {Number} code The HTTP status code.
      * @param {Error} err The error to throw (e.g. Network Error)
      */
-    fail: function(code, err) {
+    public fail = (code: number, err: Error) => {
         this.response = {
             response: {
                 statusCode: code,
@@ -393,7 +411,7 @@ ExpectedRequest.prototype = {
             body: null,
             err: err,
         };
-    },
+    }
 };
 
 /**
@@ -403,60 +421,39 @@ ExpectedRequest.prototype = {
  * @param {object} opts opts passed to request()
  * @param {function} callback
  */
-function Request(opts, callback) {
-    this.opts = opts;
-    this.callback = callback;
+class Request {
+    constructor (private readonly opts: RequestOpts, public readonly callback: Callback) {}
 
-    Object.defineProperty(this, 'method', {
-        get: function() {
-            return opts.method;
-        },
-    });
+    public get method(): HttpMethod {
+        return this.opts.method;
+    }
 
-    Object.defineProperty(this, 'path', {
-        get: function() {
-            return opts.uri;
-        },
-    });
+    public get path(): string {
+        return this.opts.uri;
+    }
 
-    /**
-     * Parse the body of the request as a JSON object and return it.
-     */
-    Object.defineProperty(this, 'data', {
-        get: function() {
-            return opts.body ? JSON.parse(opts.body) : opts.body;
-        },
-    });
+    public get data(): string {
+        return this.opts.body ? JSON.parse(this.opts.body) : this.opts.body;
+    }
 
-    /**
-     * Return the raw body passed to request
-     */
-    Object.defineProperty(this, 'rawData', {
-        get: function() {
-            return opts.body;
-        },
-    });
+    public get rawData(): string {
+        return this.opts.body;
+    }
 
-    Object.defineProperty(this, 'queryParams', {
-        get: function() {
-            return opts.qs;
-        },
-    });
+    public get queryParams(): Record<string, string> | undefined {
+        return this.opts.qs;
+    }
 
-    Object.defineProperty(this, 'headers', {
-        get: function() {
-            return opts.headers || {};
-        },
-    });
-}
+    public get  headers(): Record<string, string> {
+        return this.opts.headers || {};
+    }
 
-Request.prototype = {
-    toString: function() {
+    public toString(): string {
         return this.method + " " + this.path;
-    },
-};
+    }
+}
 
 /**
  * The HttpBackend class.
  */
-module.exports = HttpBackend;
+export default HttpBackend;
