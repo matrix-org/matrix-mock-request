@@ -1,3 +1,6 @@
+## 2.0.0
+
+- Convert to typescript
 ## 1.2.3
 
  - Convert away from `Promise.defer`.
