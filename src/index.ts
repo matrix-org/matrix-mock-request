@@ -2,6 +2,7 @@
 Copyright 2015, 2016 OpenMarket Ltd
 Copyright 2017 Vector Creations Ltd
 Copyright 2018 New Vector Ltd
+Copyright 2022 The Matrix.org Foundation C.I.C
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +20,7 @@ limitations under the License.
 import expect from 'expect';
 
 type HttpMethod = 'GET' | 'PUT' | 'POST' | 'DELETE';
-type Callback = (err?: Error, response?: XMLHttpRequest, body?: string) => void;
+type Callback = (err?: Error, response?: XMLHttpRequest | ExpectedRequestResponse['response'], body?: string) => void;
 type RequestOpts = {
     method: HttpMethod;
     uri: string;
@@ -239,12 +240,12 @@ class HttpBackend {
      * @return {boolean} true if something was resolved.
      */
     private _takeFromQueue = (path: string): boolean => {
-        let req = null;
-        let i;
-        let j;
-        let matchingReq = null;
-        let expectedReq = null;
-        let testResponse = null;
+        let req: Request | null = null;
+        let i: number;
+        let j: number;
+        let matchingReq: ExpectedRequest | null = null;
+        let expectedReq: ExpectedRequest | null = null;
+        let testResponse: ExpectedRequest['response'] | null = null;
         for (i = 0; i < this.requests.length; i++) {
             req = this.requests[i];
             for (j = 0; j < this.expectedRequests.length; j++) {
@@ -299,10 +300,14 @@ class HttpBackend {
      */
     public verifyNoOutstandingRequests = (): void => {
         const firstOutstandingReq = this.requests[0];
-        expect(this.requests.length).toEqual(0,
-            "Expected no more HTTP requests but received request to " +
-            firstOutstandingReq?.path,
-        );
+        try {
+            expect(this.requests.length).toEqual(0);
+        } catch (error) {
+            throw Error(
+                "Expected no more HTTP requests but received request to " +
+                firstOutstandingReq?.path,
+            );
+        }
     }
 
     /**
@@ -310,9 +315,15 @@ class HttpBackend {
      */
     public verifyNoOutstandingExpectation = (): void => {
         const firstOutstandingExpectation = this.expectedRequests[0];
-        expect(this.expectedRequests.length).toEqual(0,
-            "Expected to see HTTP request for " + firstOutstandingExpectation?.path,
-        );
+
+        try {
+            expect(this.expectedRequests.length).toEqual(0);
+        } catch (error) {
+            throw Error(
+                "Expected no unresolved request but found unresolved request for " +
+                firstOutstandingExpectation?.path,
+            );
+        }
     }
 
     /**
@@ -337,6 +348,15 @@ class HttpBackend {
 };
 
 type RequestCheckFunction = (request: Request) => void;
+type ExpectedRequestResponse = {
+    response: {
+        statusCode: number;
+        headers: Record<string, string>;
+    };
+    body: null | any;
+    err?: Error;
+    rawBody?: boolean;
+}
 
 /**
  * Represents the expectation of a request.
@@ -350,7 +370,7 @@ type RequestCheckFunction = (request: Request) => void;
  * @param {object?} data
  */
 class ExpectedRequest {
-    public response: unknown = null;
+    public response: ExpectedRequestResponse | null = null;
     public checks: RequestCheckFunction[] = [];
     constructor(
         public readonly method: HttpMethod,
@@ -380,8 +400,8 @@ class ExpectedRequest {
      * @param {Boolean} rawBody true if the response should be returned directly rather
      * than json-stringifying it first.
      */
-    public respond = (
-        code: number, data?: Record<string, unknown> | (() => Record<string, unknown>),
+    public respond = <T = Record<string, unknown>, R = Record<string, unknown>>(
+        code: number, data?: T | ((path: string, data: R, request: Request) => T),
         rawBody?: boolean
     ): void => {
         this.response = {
@@ -402,7 +422,7 @@ class ExpectedRequest {
      * @param {Number} code The HTTP status code.
      * @param {Error} err The error to throw (e.g. Network Error)
      */
-    public fail = (code: number, err: Error) => {
+    public fail = (code: number, err: Error): void => {
         this.response = {
             response: {
                 statusCode: code,
