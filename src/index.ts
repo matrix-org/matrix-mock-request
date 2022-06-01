@@ -380,8 +380,8 @@ class ExpectedRequest {
      * @param {Boolean} rawBody true if the response should be returned directly rather
      * than json-stringifying it first.
      */
-    public respond = (
-        code: number, data?: Record<string, unknown> | (() => Record<string, unknown>),
+    public respond = <T = Record<string, unknown>>(
+        code: number, data?: T | ((...props: any[]) => T),
         rawBody?: boolean
     ): void => {
         this.response = {
