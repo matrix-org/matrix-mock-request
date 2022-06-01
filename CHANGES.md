@@ -1,3 +1,6 @@
+## 2.0.1
+- Add generics to ExpectedRequest.respond
+- Add more types
 ## 2.0.0
 
 - Convert to typescript
