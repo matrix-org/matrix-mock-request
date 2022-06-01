@@ -298,10 +298,14 @@ class HttpBackend {
      */
     public verifyNoOutstandingRequests = (): void => {
         const firstOutstandingReq = this.requests[0];
-        expect(this.requests.length).toEqual(0,
-            "Expected no more HTTP requests but received request to " +
-            firstOutstandingReq?.path,
-        );
+        try {
+            expect(this.requests.length).toEqual(0);
+        } catch (error) {
+            throw Error(
+                "Expected no more HTTP requests but received request to " +
+                firstOutstandingReq?.path,
+            );
+        }
     }
 
     /**
@@ -309,9 +313,15 @@ class HttpBackend {
      */
     public verifyNoOutstandingExpectation = (): void => {
         const firstOutstandingExpectation = this.expectedRequests[0];
-        expect(this.expectedRequests.length).toEqual(0,
-            "Expected to see HTTP request for " + firstOutstandingExpectation?.path,
-        );
+
+        try {
+            expect(this.expectedRequests.length).toEqual(0);
+        } catch (error) {
+            throw Error(
+                "Expected no unresolved request but found unresolved request for " +
+                firstOutstandingExpectation?.path,
+            );
+        }
     }
 
     /**
