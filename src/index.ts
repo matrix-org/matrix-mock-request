@@ -402,7 +402,7 @@ class ExpectedRequest {
      * @param {Number} code The HTTP status code.
      * @param {Error} err The error to throw (e.g. Network Error)
      */
-    public fail = (code: number, err: Error) => {
+    public fail = (code: number, err: Error): void => {
         this.response = {
             response: {
                 statusCode: code,
