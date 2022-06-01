@@ -19,7 +19,7 @@ limitations under the License.
 import expect from 'expect';
 
 type HttpMethod = 'GET' | 'PUT' | 'POST' | 'DELETE';
-type Callback = (err?: Error, response?: XMLHttpRequest, body?: string) => void;
+type Callback = (err?: Error, response?: XMLHttpRequest | ExpectedRequestResponse['response'], body?: string) => void;
 type RequestOpts = {
     method: HttpMethod;
     uri: string;
@@ -27,7 +27,6 @@ type RequestOpts = {
     qs?: Record<string, string>;
     headers?: Record<string, string>;
 }
-
 /**
  * Construct a mock HTTP backend, heavily inspired by Angular.js.
  * @constructor
@@ -239,12 +238,12 @@ class HttpBackend {
      * @return {boolean} true if something was resolved.
      */
     private _takeFromQueue = (path: string): boolean => {
-        let req = null;
-        let i;
-        let j;
-        let matchingReq = null;
-        let expectedReq = null;
-        let testResponse = null;
+        let req: Request | null = null;
+        let i: number;
+        let j: number;
+        let matchingReq: ExpectedRequest | null = null;
+        let expectedReq: ExpectedRequest | null = null;
+        let testResponse: ExpectedRequest['response'] | null = null;
         for (i = 0; i < this.requests.length; i++) {
             req = this.requests[i];
             for (j = 0; j < this.expectedRequests.length; j++) {
@@ -337,6 +336,15 @@ class HttpBackend {
 };
 
 type RequestCheckFunction = (request: Request) => void;
+type ExpectedRequestResponse = {
+    response: {
+        statusCode: number;
+        headers: Record<string, string>;
+    };
+    body: null | any;
+    err?: Error;
+    rawBody?: boolean;
+}
 
 /**
  * Represents the expectation of a request.
@@ -350,7 +358,7 @@ type RequestCheckFunction = (request: Request) => void;
  * @param {object?} data
  */
 class ExpectedRequest {
-    public response: unknown = null;
+    public response: ExpectedRequestResponse | null = null;
     public checks: RequestCheckFunction[] = [];
     constructor(
         public readonly method: HttpMethod,
@@ -380,8 +388,8 @@ class ExpectedRequest {
      * @param {Boolean} rawBody true if the response should be returned directly rather
      * than json-stringifying it first.
      */
-    public respond = <T = Record<string, unknown>>(
-        code: number, data?: T | ((...props: any[]) => T),
+    public respond = <T = Record<string, unknown>, R = Record<string, unknown>>(
+        code: number, data?: T | ((path: string, data: R, request: Request) => T),
         rawBody?: boolean
     ): void => {
         this.response = {
