@@ -34,7 +34,7 @@
     "src"
   ],
   "dependencies": {
-    "expect": "^1.20.2"
+    "expect": "^28.1.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.16.7",
