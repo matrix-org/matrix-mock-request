@@ -253,10 +253,8 @@ class HttpBackend {
                 if (path && path !== expectedReq.path) {
                     continue;
                 }
-                if (expectedReq.method === req.method &&
-                        req.path.indexOf(expectedReq.path) !== -1) {
-                    if (!expectedReq.data || (JSON.stringify(expectedReq.data) ===
-                            JSON.stringify(req.data))) {
+                if (expectedReq.method === req.method && req.path.indexOf(expectedReq.path) !== -1) {
+                    if (!expectedReq.data || (JSON.stringify(expectedReq.data) === JSON.stringify(req.data))) {
                         matchingReq = expectedReq;
                         this.expectedRequests.splice(j, 1);
                         break;
@@ -452,7 +450,7 @@ class Request {
         return this.opts.uri;
     }
 
-    public get data(): string {
+    public get data(): any {
         return this.opts.body ? JSON.parse(this.opts.body) : this.opts.body;
     }
 
@@ -464,7 +462,7 @@ class Request {
         return this.opts.qs;
     }
 
-    public get  headers(): Record<string, string> {
+    public get headers(): Record<string, string> {
         return this.opts.headers || {};
     }
 
