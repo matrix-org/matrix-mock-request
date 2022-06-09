@@ -24,14 +24,10 @@
   "author": "matrix.org",
   "license": "Apache-2.0",
   "files": [
-    ".babelrc",
-    ".gitignore",
     "CHANGES.md",
-    "index.js",
     "lib",
     "LICENSE",
-    "package.json",
-    "src"
+    "package.json"
   ],
   "dependencies": {
     "expect": "^28.1.0"
