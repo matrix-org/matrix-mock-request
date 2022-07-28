@@ -115,9 +115,9 @@ class HttpBackend {
         // the only thing setting a real timer would do is allow pending promises
         // to resolve/reject. The app would have no way to know when the correct,
         // non-racy point to tick the timers is.
-        console.log(`${Date.now()} HTTP backend flushing (sync)... (path=${path}`
-            + ` numToFlush=${numToFlush}`
-            + ")"
+        console.log(
+        	`${Date.now()} HTTP backend flushing (sync)... (path=${path} ` +
+            `numToFlush=${numToFlush})`
         );
 
         let numFlushed = 0;
