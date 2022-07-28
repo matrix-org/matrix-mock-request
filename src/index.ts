@@ -97,6 +97,37 @@ class HttpBackend {
     };
 
     /**
+     * Flush any requests that have been made and are in the queue, waiting for
+     * responses. Other flush methods set timers to wait for requests to arrive,
+     * so if your test uses fake timers, you probably want to use this method,
+     * however it is up to you to make sure the request has been made and is in
+     * the queue at the point of calling this method.
+     *
+     * @param path The path to flush (optional) default: all.
+     * @param numToFlush numToFlush The maximum number of things to flush (optional), default: all.
+     *
+     * @return The number of requests flushed
+     */
+    public flushSync (path: string | undefined, numToFlush?: number): number {
+        // Note that an alternative to this method could be to let the app pass
+        // in a setTimeout function so it could give us the real setTimeout function
+        // rather than the faked one. However, if you're running with fake timers
+        // the only thing setting a real timer would do is allow pending promises
+        // to resolve/reject. The app would have no way to know when the correct,
+        // non-racy point to tick the timers is.
+        console.log(
+        	`${Date.now()} HTTP backend flushing (sync)... (path=${path} ` +
+            `numToFlush=${numToFlush})`
+        );
+
+        let numFlushed = 0;
+        while ((!numToFlush || numFlushed < numToFlush) && this._takeFromQueue(path)) {
+            ++numFlushed;
+        }
+        return numFlushed;
+    }
+
+    /**
      * Respond to all of the requests (flush the queue).
      * @param {string} path The path to flush (optional) default: all.
      * @param {integer} numToFlush The number of things to flush (optional), default: all.
