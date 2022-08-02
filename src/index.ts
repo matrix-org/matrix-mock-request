@@ -362,7 +362,7 @@ class HttpBackend {
      * @param {Object} data The expected data.
      * @return {Request} An expected request.
      */
-    public when = (method: HttpMethod, path: string, data?: Record<string, string>): ExpectedRequest => {
+    public when = (method: HttpMethod, path: string, data?: any): ExpectedRequest => {
         const pendingReq = new ExpectedRequest(method, path, data);
         this.expectedRequests.push(pendingReq);
         return pendingReq;
@@ -404,8 +404,8 @@ class ExpectedRequest {
     constructor(
         public readonly method: HttpMethod,
         public readonly path: string,
-        public readonly data?: Record<string, string>) {
-    }
+        public readonly data?: any,
+    ) {}
 
     public toString = (): string => {
         return this.method + " " + this.path
