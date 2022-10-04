@@ -80,7 +80,7 @@ class HttpBackend {
         const requestOpts = {
             uri: url.href,
             method: init?.method || 'GET',
-            body: init?.body,
+            body: init.body ? JSON.stringify(init.body) : undefined,
             qs,
         };
 
