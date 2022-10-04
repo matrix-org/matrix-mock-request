@@ -79,6 +79,14 @@ class HttpBackend {
         ok: boolean;
         status: number;
         json: () => unknown;
+        text: () => string;
+        headers: {
+            get: (key: string) => string;
+            has: (key: string) => boolean;
+            keys: () => string[];
+            values: () => string[];
+            entries: () => [string, string][];
+        };
     }> => {
         const url = new URL(input);
         const qs = Object.fromEntries(url.searchParams);
