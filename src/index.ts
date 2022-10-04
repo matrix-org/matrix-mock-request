@@ -79,7 +79,6 @@ class HttpBackend {
     }> => {
         const url = new URL(input);
         const qs = Object.fromEntries(url.searchParams);
-        url.search = "";
         
         const requestOpts = {
             uri: url.href,
