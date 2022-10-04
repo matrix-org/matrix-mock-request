@@ -101,6 +101,14 @@ class HttpBackend {
                     ok: response.statusCode >= 200 && response.statusCode < 300,
                     status: response.statusCode,
                     json: () => JSON.parse(body),
+                    text: () => body,
+                    headers: {
+                        get: key => response.headers?.[key.toLowerCase()],
+                        has: key => key.toLowerCase() in response.headers,
+                        keys: () => Object.keys(response.headers),
+                        values: () => Object.values(response.headers),
+                        entries: () => Object.entries(response.headers),
+                    },
                 });
             };
 
