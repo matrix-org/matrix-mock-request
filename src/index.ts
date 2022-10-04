@@ -92,6 +92,7 @@ class HttpBackend {
             function callback(err, response, body) {
                 if (err) {
                     reject(err);
+                    return;
                 }
                 resolve({
                     ok: response.statusCode >= 200 && response.statusCode < 300,
@@ -103,6 +104,16 @@ class HttpBackend {
             const req = new Request(requestOpts, callback);
             console.log(`HTTP backend received request: ${req}`);
             this.requests.push(req);
+            
+            init?.signal?.addEventListener("abort", () => {
+                const idx = this.requests.indexOf(req);
+
+                if (idx >= 0) {
+                    console.log("Aborting HTTP request: %s %s", requestOpts.method, requestOpts.uri);
+                    this.requests.splice(idx, 1);
+                    reject("aborted");
+                }
+            });
         });
     };
 
