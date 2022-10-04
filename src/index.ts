@@ -73,10 +73,15 @@ class HttpBackend {
     // very simplistic mapping from the whatwg fetch interface onto the request
     // interface, so we can use the same mock backend for both.
     public fetchFn = (input: URL | string, init?: Omit<RequestOpts, 'uri'>): Promise<{ ok: boolean, json: () => unknown }> => {
+        const url = new URL(input);
+        const qs = Object.fromEntries(url.searchParams);
+        url.search = "";
+        
         const requestOpts = {
-            uri: input instanceof URL ? input.href : input,
+            uri: url.href,
             method: init?.method || 'GET',
             body: init?.body,
+            qs,
         };
 
         return new Promise((resolve, reject) => {
