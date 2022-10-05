@@ -59,9 +59,9 @@ class HttpBackend {
                 console.log("Aborting HTTP request: %s %s", opts.method,
                             opts.uri);
                 self.requests.splice(idx, 1);
-                // @TODO replace this with AbortError and remove special handling in js-sdk
-                // @ts-ignore
-                req.callback("aborted");
+                const e = new Error("aborted");
+                e.name = "AbortError";
+                req.callback(e);
             }
         };
 
@@ -124,7 +124,9 @@ class HttpBackend {
                 if (idx >= 0) {
                     console.log("Aborting HTTP request: %s %s", requestOpts.method, requestOpts.uri);
                     this.requests.splice(idx, 1);
-                    reject("aborted");
+                    const e = new Error("aborted");
+                    e.name = "AbortError";
+                    reject(e);
                 }
             });
         });
