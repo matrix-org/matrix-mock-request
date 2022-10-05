@@ -1,6 +1,6 @@
 {
   "name": "matrix-mock-request",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "Testing tool for mocking HTTP request/response pairs",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
