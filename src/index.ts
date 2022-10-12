@@ -81,6 +81,7 @@ class HttpBackend {
         json: () => unknown;
         text: () => unknown;
         headers: unknown;
+        url: unknown;
     }> => {
         const url = new URL(input);
         const qs = Object.fromEntries(url.searchParams);
@@ -111,6 +112,7 @@ class HttpBackend {
                         values: () => Object.values(response.headers),
                         entries: () => Object.entries(response.headers),
                     },
+                    url: response.url,
                 });
             };
 
