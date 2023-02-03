@@ -17,6 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import debuglib from "debug";
 import expect from "expect";
 
 type HttpMethod = "GET" | "PUT" | "POST" | "DELETE";
@@ -28,6 +29,8 @@ type RequestOpts = {
     qs?: Record<string, string>;
     headers?: Record<string, string>;
 };
+
+const debug = debuglib("matrix-mock-request");
 
 /**
  * Construct a mock HTTP backend, heavily inspired by Angular.js.
@@ -51,7 +54,7 @@ class HttpBackend {
         abort: () => void;
     } => {
         const req = new Request(opts, callback);
-        console.log(`${Date.now()} HTTP backend received request: ${req}`);
+        debug(`HTTP backend received request: ${req}`);
         this.requests.push(req);
 
         const self = this;
@@ -59,7 +62,7 @@ class HttpBackend {
         const abort = function () {
             const idx = self.requests.indexOf(req);
             if (idx >= 0) {
-                console.log("Aborting HTTP request: %s %s", opts.method, opts.uri);
+                debug("Aborting HTTP request: %s %s", opts.method, opts.uri);
                 self.requests.splice(idx, 1);
                 const e = new Error("aborted");
                 e.name = "AbortError";
@@ -119,14 +122,14 @@ class HttpBackend {
             }
 
             const req = new Request(requestOpts, callback);
-            console.log(`HTTP backend received request: ${req}`);
+            debug(`HTTP backend received request: ${req}`);
             this.requests.push(req);
 
             init?.signal?.addEventListener("abort", () => {
                 const idx = this.requests.indexOf(req);
 
                 if (idx >= 0) {
-                    console.log("Aborting HTTP request: %s %s", requestOpts.method, requestOpts.uri);
+                    debug("Aborting HTTP request: %s %s", requestOpts.method, requestOpts.uri);
                     this.requests.splice(idx, 1);
                     const e = new Error("aborted");
                     e.name = "AbortError";
@@ -155,10 +158,10 @@ class HttpBackend {
         // the only thing setting a real timer would do is allow pending promises
         // to resolve/reject. The app would have no way to know when the correct,
         // non-racy point to tick the timers is.
-        console.log(`${Date.now()} HTTP backend flushing (sync)... (path=${path} ` + `numToFlush=${numToFlush})`);
+        debug(`HTTP backend flushing (sync)... (path=${path} ` + `numToFlush=${numToFlush})`);
 
         let numFlushed = 0;
-        while ((!numToFlush || numFlushed < numToFlush) && this._takeFromQueue(path)) {
+        while ((!numToFlush || numFlushed < numToFlush) && this._takeFromQueue(debug, path)) {
             ++numFlushed;
         }
         return numFlushed;
@@ -182,9 +185,7 @@ class HttpBackend {
                 waitTime = 100;
             }
 
-            function log(msg) {
-                console.log(`${Date.now()} flush[${path || ""}]: ${msg}`);
-            }
+            const log = debug.extend(`flush[${path || ""}]`);
             log("HTTP backend flushing... (path=" + path + " numToFlush=" + numToFlush + " waitTime=" + waitTime + ")");
             const endTime = waitTime + Date.now();
 
@@ -199,11 +200,11 @@ class HttpBackend {
             const _tryFlush = function () {
                 // if there's more real requests and more expected requests, flush 'em.
                 log(`  trying to flush => reqs=[${self.requests}] ` + `expected=[${self.expectedRequests}]`);
-                if (self._takeFromQueue(path)) {
+                if (self._takeFromQueue(log, path)) {
                     // try again on the next tick.
                     flushed += 1;
                     if (numToFlush && flushed === numToFlush) {
-                        log(`Flushed assigned amount: ${numToFlush}`);
+                        log(`Flushed assigned amount: ${numToFlush}: done.`);
                         resolve(flushed);
                     } else {
                         log(`  flushed. Trying for more.`);
@@ -294,10 +295,11 @@ class HttpBackend {
 
     /**
      * Attempts to resolve requests/expected requests.
+     * @param debug - log function
      * @param {string} path The path to flush (optional) default: all.
      * @return {boolean} true if something was resolved.
      */
-    private _takeFromQueue = (path: string): boolean => {
+    private _takeFromQueue = (debug: (string) => void, path: string): boolean => {
         let req: Request | null = null;
         let i: number;
         let j: number;
@@ -329,7 +331,7 @@ class HttpBackend {
                     matchingReq.checks[j](req);
                 }
                 testResponse = matchingReq.response;
-                console.log(`${Date.now()}    responding to ${matchingReq.path}`);
+                debug(`    responding to ${matchingReq.path}`);
 
                 let body = testResponse.body;
                 if (Object.prototype.toString.call(body) == "[object Function]") {
