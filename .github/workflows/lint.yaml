@@ -1,0 +1,25 @@
+name: Lint
+on:
+    pull_request: {}
+    push:
+        branches: [develop, master, main]
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node
+              uses: actions/setup-node@v3
+              with:
+                  cache: "yarn"
+
+            - name: Install dependencies
+              run: "yarn install"
+
+            - name: Run prettier
+              run: "yarn lint"
