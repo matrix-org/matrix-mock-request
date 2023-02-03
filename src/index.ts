@@ -17,17 +17,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import expect from 'expect';
+import expect from "expect";
 
-type HttpMethod = 'GET' | 'PUT' | 'POST' | 'DELETE';
-type Callback = (err?: Error, response?: XMLHttpRequest | ExpectedRequestResponse['response'], body?: string) => void;
+type HttpMethod = "GET" | "PUT" | "POST" | "DELETE";
+type Callback = (err?: Error, response?: XMLHttpRequest | ExpectedRequestResponse["response"], body?: string) => void;
 type RequestOpts = {
     method: HttpMethod;
     uri: string;
     body?: string;
     qs?: Record<string, string>;
     headers?: Record<string, string>;
-}
+};
 
 /**
  * Construct a mock HTTP backend, heavily inspired by Angular.js.
@@ -44,7 +44,10 @@ class HttpBackend {
     public _flushPromises: Promise<unknown>[] = [];
 
     // the request function dependency that the SDK needs.
-    public requestFn = (opts: RequestOpts, callback: Callback): {
+    public requestFn = (
+        opts: RequestOpts,
+        callback: Callback,
+    ): {
         abort: () => void;
     } => {
         const req = new Request(opts, callback);
@@ -53,11 +56,10 @@ class HttpBackend {
 
         const self = this;
 
-        const abort = function() {
+        const abort = function () {
             const idx = self.requests.indexOf(req);
             if (idx >= 0) {
-                console.log("Aborting HTTP request: %s %s", opts.method,
-                            opts.uri);
+                console.log("Aborting HTTP request: %s %s", opts.method, opts.uri);
                 self.requests.splice(idx, 1);
                 const e = new Error("aborted");
                 e.name = "AbortError";
@@ -74,7 +76,7 @@ class HttpBackend {
     // interface, so we can use the same mock backend for both.
     public fetchFn = (
         input: URL | string,
-        init?: Omit<RequestOpts, 'uri'> & { signal?: AbortSignal },
+        init?: Omit<RequestOpts, "uri"> & { signal?: AbortSignal },
     ): Promise<{
         ok: boolean;
         status: number;
@@ -85,10 +87,10 @@ class HttpBackend {
     }> => {
         const url = new URL(input);
         const qs = Object.fromEntries(url.searchParams);
-        
+
         const requestOpts = {
             uri: url.href,
-            method: init?.method || 'GET',
+            method: init?.method || "GET",
             headers: init?.headers,
             body: init?.body,
             qs,
@@ -106,20 +108,20 @@ class HttpBackend {
                     json: () => JSON.parse(body),
                     text: () => body,
                     headers: {
-                        get: key => response.headers?.[key.toLowerCase()],
-                        has: key => key.toLowerCase() in response.headers,
+                        get: (key) => response.headers?.[key.toLowerCase()],
+                        has: (key) => key.toLowerCase() in response.headers,
                         keys: () => Object.keys(response.headers),
                         values: () => Object.values(response.headers),
                         entries: () => Object.entries(response.headers),
                     },
                     url: response.url,
                 });
-            };
+            }
 
             const req = new Request(requestOpts, callback);
             console.log(`HTTP backend received request: ${req}`);
             this.requests.push(req);
-            
+
             init?.signal?.addEventListener("abort", () => {
                 const idx = this.requests.indexOf(req);
 
@@ -146,17 +148,14 @@ class HttpBackend {
      *
      * @return The number of requests flushed
      */
-    public flushSync (path: string | undefined, numToFlush?: number): number {
+    public flushSync(path: string | undefined, numToFlush?: number): number {
         // Note that an alternative to this method could be to let the app pass
         // in a setTimeout function so it could give us the real setTimeout function
         // rather than the faked one. However, if you're running with fake timers
         // the only thing setting a real timer would do is allow pending promises
         // to resolve/reject. The app would have no way to know when the correct,
         // non-racy point to tick the timers is.
-        console.log(
-        	`${Date.now()} HTTP backend flushing (sync)... (path=${path} ` +
-            `numToFlush=${numToFlush})`
-        );
+        console.log(`${Date.now()} HTTP backend flushing (sync)... (path=${path} ` + `numToFlush=${numToFlush})`);
 
         let numFlushed = 0;
         while ((!numToFlush || numFlushed < numToFlush) && this._takeFromQueue(path)) {
@@ -184,16 +183,12 @@ class HttpBackend {
             }
 
             function log(msg) {
-                console.log(`${Date.now()} flush[${path || ''}]: ${msg}`);
+                console.log(`${Date.now()} flush[${path || ""}]: ${msg}`);
             }
-            log("HTTP backend flushing... (path=" + path
-                + " numToFlush=" + numToFlush
-                + " waitTime=" + waitTime
-                + ")"
-            );
+            log("HTTP backend flushing... (path=" + path + " numToFlush=" + numToFlush + " waitTime=" + waitTime + ")");
             const endTime = waitTime + Date.now();
 
-            const tryFlush = function() {
+            const tryFlush = function () {
                 try {
                     _tryFlush();
                 } catch (e) {
@@ -201,11 +196,9 @@ class HttpBackend {
                 }
             };
 
-            const _tryFlush = function() {
+            const _tryFlush = function () {
                 // if there's more real requests and more expected requests, flush 'em.
-                log(`  trying to flush => reqs=[${self.requests}] ` +
-                    `expected=[${self.expectedRequests}]`
-                );
+                log(`  trying to flush => reqs=[${self.requests}] ` + `expected=[${self.expectedRequests}]`);
                 if (self._takeFromQueue(path)) {
                     // try again on the next tick.
                     flushed += 1;
@@ -216,8 +209,7 @@ class HttpBackend {
                         log(`  flushed. Trying for more.`);
                         setTimeout(tryFlush, 0);
                     }
-                } else if ((flushed === 0 || (numToFlush && numToFlush > flushed))
-                    && Date.now() < endTime) {
+                } else if ((flushed === 0 || (numToFlush && numToFlush > flushed)) && Date.now() < endTime) {
                     // we may not have made the request yet, wait a generous amount of
                     // time before giving up.
                     log(`  nothing to flush yet; waiting for requests.`);
@@ -238,7 +230,7 @@ class HttpBackend {
         this._flushPromises.push(promise);
 
         return promise;
-    }
+    };
 
     /**
      * Repeatedly flush requests until the list of expectations is empty.
@@ -259,9 +251,7 @@ class HttpBackend {
             // silly thing to do, and probably means that your test isn't
             // doing what you think it is doing (or it is racy). Hence we
             // reject this, rather than resolving immediately.
-            return Promise.reject(new Error(
-                `flushAllExpected called with an empty expectation list`,
-            ));
+            return Promise.reject(new Error(`flushAllExpected called with an empty expectation list`));
         }
 
         const waitTime = opts.timeout === undefined ? 1000 : opts.timeout;
@@ -272,14 +262,11 @@ class HttpBackend {
             const timeRemaining = endTime - Date.now();
             if (timeRemaining <= 0) {
                 throw new Error(
-                    `Timed out after flushing ${flushed} requests; `+
-                    `${this.expectedRequests.length} remaining`,
+                    `Timed out after flushing ${flushed} requests; ` + `${this.expectedRequests.length} remaining`,
                 );
             }
 
-            return this.flush(
-                undefined, undefined, timeRemaining,
-            ).then((f) => {
+            return this.flush(undefined, undefined, timeRemaining).then((f) => {
                 flushed += f;
 
                 if (this.expectedRequests.length === 0) {
@@ -292,16 +279,18 @@ class HttpBackend {
         };
 
         const prom = new Promise<number>((resolve, reject) => {
-            iterate().then(() => {
-                resolve(flushed);
-            }, (e) => {
-                reject(e);
-            });
+            iterate().then(
+                () => {
+                    resolve(flushed);
+                },
+                (e) => {
+                    reject(e);
+                },
+            );
         });
         this._flushPromises.push(prom);
         return prom;
-    }
-
+    };
 
     /**
      * Attempts to resolve requests/expected requests.
@@ -314,7 +303,7 @@ class HttpBackend {
         let j: number;
         let matchingReq: ExpectedRequest | null = null;
         let expectedReq: ExpectedRequest | null = null;
-        let testResponse: ExpectedRequest['response'] | null = null;
+        let testResponse: ExpectedRequest["response"] | null = null;
         for (i = 0; i < this.requests.length; i++) {
             req = this.requests[i];
             for (j = 0; j < this.expectedRequests.length; j++) {
@@ -323,7 +312,7 @@ class HttpBackend {
                     continue;
                 }
                 if (expectedReq.method === req.method && req.path.indexOf(expectedReq.path) !== -1) {
-                    if (!expectedReq.data || (JSON.stringify(expectedReq.data) === JSON.stringify(req.data))) {
+                    if (!expectedReq.data || JSON.stringify(expectedReq.data) === JSON.stringify(req.data)) {
                         matchingReq = expectedReq;
                         this.expectedRequests.splice(j, 1);
                         break;
@@ -350,17 +339,16 @@ class HttpBackend {
                 if (!testResponse.rawBody) {
                     body = JSON.stringify(body);
                 }
-                req.callback(
-                    testResponse.err, testResponse.response, body,
-                );
+                req.callback(testResponse.err, testResponse.response, body);
                 matchingReq = null;
             }
         }
-        if (testResponse) {  // flushed something
+        if (testResponse) {
+            // flushed something
             return true;
         }
         return false;
-    }
+    };
 
     /**
      * Makes sure that the SDK hasn't sent any more requests to the backend.
@@ -370,12 +358,9 @@ class HttpBackend {
         try {
             expect(this.requests.length).toEqual(0);
         } catch (error) {
-            throw Error(
-                "Expected no more HTTP requests but received request to " +
-                firstOutstandingReq?.path,
-            );
+            throw Error("Expected no more HTTP requests but received request to " + firstOutstandingReq?.path);
         }
-    }
+    };
 
     /**
      * Makes sure that the test doesn't have any unresolved requests.
@@ -387,11 +372,10 @@ class HttpBackend {
             expect(this.expectedRequests.length).toEqual(0);
         } catch (error) {
             throw Error(
-                "Expected no unresolved request but found unresolved request for " +
-                firstOutstandingExpectation?.path,
+                "Expected no unresolved request but found unresolved request for " + firstOutstandingExpectation?.path,
             );
         }
-    }
+    };
 
     /**
      * Create an expected request.
@@ -404,15 +388,15 @@ class HttpBackend {
         const pendingReq = new ExpectedRequest(method, path, data);
         this.expectedRequests.push(pendingReq);
         return pendingReq;
-    }
+    };
 
     /**
      * @return {Promise} resolves once all pending flushes are complete.
      */
     public stop = (): Promise<unknown[]> => {
         return Promise.all(this._flushPromises);
-    }
-};
+    };
+}
 
 type RequestCheckFunction = (request: Request) => void;
 type ExpectedRequestResponse = {
@@ -423,7 +407,7 @@ type ExpectedRequestResponse = {
     body: null | any;
     err?: Error;
     rawBody?: boolean;
-}
+};
 
 /**
  * Represents the expectation of a request.
@@ -439,15 +423,11 @@ type ExpectedRequestResponse = {
 class ExpectedRequest {
     public response: ExpectedRequestResponse | null = null;
     public checks: RequestCheckFunction[] = [];
-    constructor(
-        public readonly method: HttpMethod,
-        public readonly path: string,
-        public readonly data?: any,
-    ) {}
+    constructor(public readonly method: HttpMethod, public readonly path: string, public readonly data?: any) {}
 
     public toString = (): string => {
-        return this.method + " " + this.path
-    }
+        return this.method + " " + this.path;
+    };
 
     /**
      * Execute a check when this request has been satisfied.
@@ -468,21 +448,22 @@ class ExpectedRequest {
      * than json-stringifying it first.
      */
     public respond = <T = Record<string, unknown>, R = Record<string, unknown>>(
-        code: number, data?: T | ((path: string, data: R, request: Request) => T),
-        rawBody?: boolean
+        code: number,
+        data?: T | ((path: string, data: R, request: Request) => T),
+        rawBody?: boolean,
     ): void => {
         this.response = {
             response: {
                 statusCode: code,
                 headers: {
-                    'content-type': 'application/json',
+                    "content-type": "application/json",
                 },
             },
             body: data || "",
             err: null,
             rawBody: rawBody || false,
         };
-    }
+    };
 
     /**
      * Fail with an Error when this request is satisfied.
@@ -498,8 +479,8 @@ class ExpectedRequest {
             body: null,
             err: err,
         };
-    }
-};
+    };
+}
 
 /**
  * Represents a request made by the app.
@@ -509,7 +490,7 @@ class ExpectedRequest {
  * @param {function} callback
  */
 class Request {
-    constructor (private readonly opts: RequestOpts, public readonly callback: Callback) {}
+    constructor(private readonly opts: RequestOpts, public readonly callback: Callback) {}
 
     public get method(): HttpMethod {
         return this.opts.method;
